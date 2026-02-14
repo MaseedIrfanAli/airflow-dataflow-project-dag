@@ -1,0 +1,30 @@
+name: Sync to GCS
+on:
+  push:
+    branches:
+      - main # Trigger this workflow on pushes to the 'main' branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # Action to checkout your repository code
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2 # Action to authenticate with GCP
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2 # Action to set up gcloud CLI
+
+      - name: Synchronize to GCS
+        run: |
+          # Use gsutil rsync to sync the current repository directory to the GCS bucket
+          # The -d flag deletes extra files in the destination that are not in the source
+          # The -r flag performs recursive synchronization for directories
+          # The -x '\.git/' excludes the .git directory
+          gsutil rsync -d -r -x '\.git/|\.github/' . gs://us-central1-interview-compo-4aaf5de5-bucket/dags/
+
+          echo "Synchronization complete!"
