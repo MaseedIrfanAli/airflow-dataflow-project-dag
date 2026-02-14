@@ -1,10 +1,10 @@
 from airflow import DAG
 from airflow.providers.google.cloud.operators.dataflow import DataflowStartFlexTemplateOperator
 from datetime import datetime
+from airflow.models import Variable
 
 PROJECT_ID = "bamboo-autumn-484913-i0"
 REGION = "us-central1"
-from airflow.models import Variable
 
 BUILD_VERSION = Variable.get("dataflow_build_version")
 
