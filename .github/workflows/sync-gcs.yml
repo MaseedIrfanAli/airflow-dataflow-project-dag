@@ -25,6 +25,6 @@ jobs:
           # The -d flag deletes extra files in the destination that are not in the source
           # The -r flag performs recursive synchronization for directories
           # The -x '\.git/' excludes the .git directory
-          gsutil rsync -d -r -x '\.git/|\.github/' . gs://us-central1-interview-compo-4aaf5de5-bucket/dags/
+          gsutil rsync -d -r -x '\.git/|\.github/' . gs://us-central1-interview-compo-5443746f-bucket/dags
 
           echo "Synchronization complete!"
