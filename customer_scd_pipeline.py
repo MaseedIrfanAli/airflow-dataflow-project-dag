@@ -3,7 +3,7 @@ from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobO
 from airflow.operators.python import PythonOperator
 from datetime import datetime
 
-PROJECT_ID = "your-project-id"
+PROJECT_ID = "bamboo-autumn-484913-i0"
 DATASET = "retail"
 
 default_args = {
