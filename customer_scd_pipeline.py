@@ -2,9 +2,8 @@ from airflow import DAG
 from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 from airflow.operators.python import PythonOperator
 from datetime import datetime
-import uuid
 
-PROJECT_ID = "bamboo-autumn-484913-i0"
+PROJECT_ID = "your-project-id"
 DATASET = "retail"
 
 default_args = {
@@ -12,43 +11,15 @@ default_args = {
     "retries": 1,
 }
 
-def load_dummy_customers():
-    from google.cloud import bigquery
-    client = bigquery.Client()
-
-    rows = [
-        {
-            "customer_id": "C101",
-            "name": "John",
-            "email": "john@email.com",
-            "address": "New York",
-            "updated_at": datetime.utcnow().isoformat()
-        },
-        {
-            "customer_id": "C102",
-            "name": "Ali",
-            "email": "ali@email.com",
-            "address": "Texas",
-            "updated_at": datetime.utcnow().isoformat()
-        }
-    ]
-
-    table_id = f"{PROJECT_ID}.{DATASET}.customer_staging"
-    client.insert_rows_json(table_id, rows)
-
 with DAG(
-    dag_id="customer_scd_type2_pipeline",
+    dag_id="retail_streaming_pipeline",
     default_args=default_args,
     schedule_interval="@daily",
     catchup=False,
-    tags=["retail", "scd", "bigquery"]
+    tags=["retail", "scd", "streaming"]
 ) as dag:
 
-    load_staging = PythonOperator(
-        task_id="load_dummy_customers",
-        python_callable=load_dummy_customers
-    )
-
+    # 1️⃣ SCD Type 2 MERGE
     scd_merge = BigQueryInsertJobOperator(
         task_id="run_scd_merge",
         configuration={
@@ -95,17 +66,44 @@ with DAG(
         },
     )
 
-    data_quality_check = BigQueryInsertJobOperator(
-        task_id="data_quality_check",
+    # 2️⃣ Load Fact Orders (Now using streaming table)
+    load_fact_orders = BigQueryInsertJobOperator(
+        task_id="load_fact_orders",
         configuration={
             "query": {
                 "query": f"""
-                SELECT COUNT(*) FROM `{PROJECT_ID}.{DATASET}.dim_customer`
-                WHERE is_current = TRUE
+                INSERT INTO `{PROJECT_ID}.{DATASET}.fact_orders`
+                (order_id, customer_sk, amount, order_time)
+
+                SELECT
+                    o.order_id,
+                    d.customer_sk,
+                    o.amount,
+                    o.order_time
+                FROM `{PROJECT_ID}.{DATASET}.orders_raw` o
+                JOIN `{PROJECT_ID}.{DATASET}.dim_customer` d
+                  ON o.customer_id = d.customer_id
+                 AND d.is_current = TRUE
+                WHERE DATE(o.order_time) = CURRENT_DATE()
                 """,
                 "useLegacySql": False,
             }
         },
     )
 
-    load_staging >> scd_merge >> data_quality_check
+    # 3️⃣ Data Quality Check
+    dq_check = BigQueryInsertJobOperator(
+        task_id="dq_check",
+        configuration={
+            "query": {
+                "query": f"""
+                SELECT COUNT(*) 
+                FROM `{PROJECT_ID}.{DATASET}.fact_orders`
+                WHERE customer_sk IS NULL
+                """,
+                "useLegacySql": False,
+            }
+        },
+    )
+
+    scd_merge >> load_fact_orders >> dq_check
