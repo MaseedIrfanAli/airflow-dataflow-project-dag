@@ -10,6 +10,7 @@ BUILD_VERSION = Variable.get("dataflow_build_version")
 
 TEMPLATE_GCS_PATH = (
     f"gs://interview-dataflow-templates/bq_to_bq_build-{BUILD_VERSION}.json"
+    
 )
 
 default_args = {
