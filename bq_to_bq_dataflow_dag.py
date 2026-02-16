@@ -41,7 +41,7 @@ with DAG(
                 "environment": {
                     "tempLocation": "gs://interview-dataflow-templates/temp/",
                     "stagingLocation": "gs://interview-dataflow-templates/staging/"
-                    "serviceAccountEmail": "969772127305-compute@developer.gserviceaccount.com"
+                   
                 }
             }
         }
